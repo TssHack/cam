@@ -13,7 +13,7 @@
   <div class="container">
     <h2>Cam Doctor v1</h2>
 
-    <form id="camForm">
+    <form id="camForm" onsubmit="event.preventDefault();">
       <input type="number" step="any" id="lift" placeholder="e.g. 10.5">
 
       <label for="intake1">Intake Duration @ 1mm Lift (°)</label>
@@ -35,10 +35,11 @@
       <input type="number" step="any" id="exhaustLCA" placeholder="e.g. 114">
     </form>
 
+    <!-- دکمه‌ها از فرم بیرون اومدن -->
     <div class="buttons">
-      <button onclick="generatePDF()">Generate PDF</button>
-      <button onclick="showResults()">Show Output</button>
-      <button onclick="exportAsImage()">Export as Image</button>
+      <button type="button" onclick="generatePDF()">Generate PDF</button>
+      <button type="button" onclick="showResults()">Show Output</button>
+      <button type="button" onclick="exportAsImage()">Export as Image</button>
     </div>
 
     <div id="outputArea" class="output-area"></div>
