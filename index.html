@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cam Doctor v1</title>
+  <title>Cam doctor - by hyper cams</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -11,6 +11,7 @@
 <body>
 
   <div class="container">
+    <img src="goz.png" alt="Logo" style="width: 120px; display: block; margin: 0 auto;" />
     <h2>Cam Doctor v1</h2>
 
     <form id="camForm" onsubmit="event.preventDefault();">
@@ -35,7 +36,6 @@
       <input type="number" step="any" id="exhaustLCA" placeholder="e.g. 114">
     </form>
 
-    <!-- دکمه‌ها از فرم بیرون اومدن -->
     <div class="buttons">
       <button type="button" onclick="generatePDF()">Generate PDF</button>
       <button type="button" onclick="showResults()">Show Output</button>
@@ -45,8 +45,11 @@
     <div id="outputArea" class="output-area"></div>
   </div>
 
-  <footer>
-    Developed by <strong>Shafaq</strong>
+  <footer style="margin-top: 40px; text-align: center;">
+    Site owner: 
+    <a href="https://www.instagram.com/hyper_cams" target="_blank">@hyper_cams</a> | 
+    Developed by: 
+    <a href="https://t.me/abj0o" target="_blank">@abj0o</a>
   </footer>
 
   <script src="script.js"></script>
