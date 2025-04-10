@@ -46,11 +46,17 @@ button:hover {
 }
 
 .output-area {
-  margin-top: 30px;
+  background: linear-gradient(135deg, #f5faff, #e0f0ff);
+  border: 2px solid #aad4ff;
   padding: 20px;
-  background: #eef;
-  border-radius: 8px;
-  display: none;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 87, 217, 0.2);
+  font-family: 'Segoe UI', sans-serif;
+  color: #003366;
+}
+.output-area h3 {
+  color: #0057d9;
+  margin-bottom: 15px;
 }
 
 footer {
