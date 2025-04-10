@@ -1,177 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cam Doctor v1</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      color: #f0f0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 50px 20px;
-    }
-
-    h1 {
-      margin-bottom: 30px;
-      font-size: 2em;
-      letter-spacing: 1px;
-    }
-
-    .card {
-      background-color: #ffffff10;
-      backdrop-filter: blur(10px);
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-      width: 100%;
-      max-width: 400px;
-    }
-
-    label {
-      display: block;
-      margin-top: 15px;
-      font-size: 0.95em;
-      color: #cfd8dc;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1em;
-      background: #ffffff20;
-      color: #fff;
-      outline: none;
-    }
-
-    input::placeholder {
-      color: #ddd;
-    }
-
-    .btn {
-      margin-top: 30px;
-      padding: 12px 20px;
-      width: 100%;
-      background: #00bcd4;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 1em;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .btn:hover {
-      background: #008c9e;
-    }
-
-    .note {
-      font-size: 0.8em;
-      color: #ccc;
-      margin-top: 10px;
-    }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
-  <h1>Cam Doctor v1</h1>
+  <div class="container">
+    <h2>Cam Doctor v1</h2>
 
-  <div class="card">
     <form id="camForm">
-      <label for="lift">Valve Lift (mm)</label>
-      <input type="number" step="any" id="lift" placeholder="e.g. 10.5">
-
-      <label for="intake1">Intake Duration @ 1mm Lift (°)</label>
-      <input type="number" step="any" id="intake1" placeholder="e.g. 270">
-
-      <label for="intake01">Intake Duration @ 0.1mm Lift (°)</label>
-      <input type="number" step="any" id="intake01" placeholder="e.g. 300">
-
-      <label for="exhaust1">Exhaust Duration @ 1mm Lift (°)</label>
-      <input type="number" step="any" id="exhaust1" placeholder="e.g. 272">
-
-      <label for="exhaust01">Exhaust Duration @ 0.1mm Lift (°)</label>
-      <input type="number" step="any" id="exhaust01" placeholder="e.g. 310">
-
-      <label for="intakeLCA">Intake Lobe Center Angle (°)</label>
-      <input type="number" step="any" id="intakeLCA" placeholder="e.g. 110">
-
-      <label for="exhaustLCA">Exhaust Lobe Center Angle (°)</label>
-      <input type="number" step="any" id="exhaustLCA" placeholder="e.g. 114">
-
-      <button type="button" class="btn" onclick="generatePDF()">Generate PDF</button>
+      <input type="number" step="any" placeholder="Valve Lift (mm)" id="lift" />
+      <input type="number" step="any" placeholder="Intake Duration @1mm" id="intake1" />
+      <input type="number" step="any" placeholder="Intake Duration @0.1" id="intake01" />
+      <input type="number" step="any" placeholder="Exhaust Duration @1mm" id="exhaust1" />
+      <input type="number" step="any" placeholder="Exhaust Duration @0.1" id="exhaust01" />
+      <input type="number" step="any" placeholder="Intake Lobe Center Angle" id="intakeLCA" />
+      <input type="number" step="any" placeholder="Exhaust Lobe Center Angle" id="exhaustLCA" />
     </form>
+
+    <div class="buttons">
+      <button onclick="generatePDF()">Generate PDF</button>
+      <button onclick="showResults()">Show Output</button>
+      <button onclick="exportAsImage()">Export as Image</button>
+    </div>
+
+    <div id="outputArea" class="output-area"></div>
   </div>
 
-  <script>
-    async function generatePDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+  <footer>
+    Developed by <strong>Shafaq</strong>
+  </footer>
 
-      // Get input values
-      const lift = parseFloat(document.getElementById("lift").value);
-      const intake1 = parseFloat(document.getElementById("intake1").value);
-      const intake01 = parseFloat(document.getElementById("intake01").value);
-      const exhaust1 = parseFloat(document.getElementById("exhaust1").value);
-      const exhaust01 = parseFloat(document.getElementById("exhaust01").value);
-      const intakeLCA = parseFloat(document.getElementById("intakeLCA").value);
-      const exhaustLCA = parseFloat(document.getElementById("exhaustLCA").value);
-
-      // Validate input
-      if ([lift, intake1, intake01, exhaust1, exhaust01, intakeLCA, exhaustLCA].some(val => isNaN(val))) {
-        alert("Please fill in all fields correctly before generating PDF.");
-        return;
-      }
-
-      // Calculations
-      const ivo = intakeLCA - intake1 / 2;
-      const ivc = intakeLCA + intake1 / 2;
-      const evo = exhaustLCA - exhaust1 / 2;
-      const evc = exhaustLCA + exhaust1 / 2;
-
-      // Design PDF
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text("Camshaft Analysis Report", 20, 20);
-      doc.setLineWidth(0.5);
-      doc.line(20, 22, 190, 22);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-
-      let y = 35;
-      const data = [
-        { label: "Valve Lift", value: `${lift} mm` },
-        { label: "Intake Duration @ 1mm", value: `${intake1}°` },
-        { label: "Intake Duration @ 0.1mm", value: `${intake01}°` },
-        { label: "Exhaust Duration @ 1mm", value: `${exhaust1}°` },
-        { label: "Exhaust Duration @ 0.1mm", value: `${exhaust01}°` },
-        { label: "Intake Lobe Center Angle", value: `${intakeLCA}°` },
-        { label: "Exhaust Lobe Center Angle", value: `${exhaustLCA}°` },
-        { label: "Intake Valve Timing", value: `Opens @ ${ivo}°, Closes @ ${ivc}°` },
-        { label: "Exhaust Valve Timing", value: `Opens @ ${evo}°, Closes @ ${evc}°` }
-      ];
-
-      data.forEach(({ label, value }) => {
-        doc.text(`${label}:`, 20, y);
-        doc.text(value, 90, y);
-        y += 10;
-      });
-
-      doc.save("camshaft_report.pdf");
-      alert("PDF successfully generated!");
-    }
-  </script>
-<footer style="margin-top: 50px; text-align: center; color: #bbb; font-size: 0.9em;">
-  Developed by <strong>Shafaq</strong>
-</footer>
+  <script src="script.js"></script>
 </body>
 </html>
