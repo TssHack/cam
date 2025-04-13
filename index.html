@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"> <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cam doctor 1v</title>
+  <title>Cam Doctor v2 - Camshaft Analyzer</title> <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="goz.png" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -13,84 +15,73 @@
 <body>
 
   <div class="container">
-    <img src="goz.png" alt="Logo" style="
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  display: block;
-  margin: 0 auto 20px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 
-              0 4px 6px rgba(0, 0, 0, 0.1);
-  object-fit: cover;
-" />
-    <h2 style="text-align: center;">Cam doctor v1</h2>
-
-    <form id="camForm" onsubmit="event.preventDefault();">
-      <label for="intake1">Lift (mm)</label>
-      <input type="number" step="any" id="lift" placeholder="e.g. 10.5">
-
-      <label for="intake1">Intake Duration @ 1mm Lift (°)</label>
-      <input type="number" step="any" id="intake1" placeholder="e.g. 270">
-
-      <label for="intake01">Intake Duration @ 0.1mm Lift (°)</label>
-      <input type="number" step="any" id="intake01" placeholder="e.g. 300">
-
-      <label for="exhaust1">Exhaust Duration @ 1mm Lift (°)</label>
-      <input type="number" step="any" id="exhaust1" placeholder="e.g. 272">
-
-      <label for="exhaust01">Exhaust Duration @ 0.1mm Lift (°)</label>
-      <input type="number" step="any" id="exhaust01" placeholder="e.g. 310">
-
-      <label for="intakeLCA">Intake Lobe Center Angle (°)</label>
-      <input type="number" step="any" id="intakeLCA" placeholder="e.g. 110">
-
-      <label for="exhaustLCA">Exhaust Lobe Center Angle (°)</label>
-      <input type="number" step="any" id="exhaustLCA" placeholder="e.g. 114">
+    <img src="goz.png" alt="Logo" class="logo-img" /> <h2 class="title">Cam Doctor v2</h2> <form id="camForm" onsubmit="event.preventDefault();">
+      <div class="form-grid"> <div class="input-group">
+          <label for="lift">Lift (mm)</label>
+          <input type="number" step="any" id="lift" placeholder="e.g. 10.5">
+        </div>
+        <div class="input-group">
+          <label for="intake1">Intake Duration @ 1mm Lift (°)</label>
+          <input type="number" step="any" id="intake1" placeholder="e.g. 270">
+        </div>
+        <div class="input-group">
+          <label for="intake01">Intake Duration @ 0.1mm Lift (°)</label>
+          <input type="number" step="any" id="intake01" placeholder="e.g. 300">
+        </div>
+        <div class="input-group">
+           <label for="exhaust1">Exhaust Duration @ 1mm Lift (°)</label>
+           <input type="number" step="any" id="exhaust1" placeholder="e.g. 272">
+        </div>
+        <div class="input-group">
+          <label for="exhaust01">Exhaust Duration @ 0.1mm Lift (°)</label>
+          <input type="number" step="any" id="exhaust01" placeholder="e.g. 310">
+        </div>
+        <div class="input-group">
+          <label for="intakeLCA">Intake Lobe Center Angle (LCA °)</label>
+          <input type="number" step="any" id="intakeLCA" placeholder="e.g. 110">
+        </div>
+        <div class="input-group">
+           <label for="exhaustLCA">Exhaust Lobe Center Angle (LCA °)</label>
+           <input type="number" step="any" id="exhaustLCA" placeholder="e.g. 114">
+        </div>
+      </div>
     </form>
 
     <div class="buttons">
-      <button type="button" onclick="generatePDF()">Generate PDF</button>
-      <button type="button" onclick="showResults()">Show Output</button>
-      <button type="button" onclick="exportAsImage()">Export as Image</button>
+      <button type="button" id="btnGeneratePdf" onclick="generatePDF()">
+        <i class="fas fa-file-pdf"></i> Generate PDF
+      </button>
+      <button type="button" id="btnShowOutput" onclick="showResults()">
+        <i class="fas fa-eye"></i> Show Output
+      </button>
+      <button type="button" id="btnExportImage" onclick="exportAsImage()">
+        <i class="fas fa-image"></i> Export Image
+      </button>
     </div>
 
-    <div id="outputArea" class="output-area"></div>
+    <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+      <div class="spinner"></div>
+      <span>Processing...</span>
+    </div>
+
+    <div id="outputArea" class="output-area" style="display: none;">
+      </div>
   </div>
 
-  <footer style="
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  color: #f1f1f1;
-  padding: 30px 15px;
-  margin-top: 60px;
-  text-align: center;
-  font-size: 15px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.3);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-">
-  <div style="margin-bottom: 10px;">
-    Site owner:
-    <a href="https://www.instagram.com/hyper_cams" target="_blank" style="
-      color: #4fc3f7;
-      text-decoration: none;
-      margin: 0 10px;
-      transition: color 0.3s ease;
-    " onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#4fc3f7'">
-      <i class="fab fa-instagram"></i> @hyper_cams
-    </a>
-  </div>
-  <div>
-    Developed by:
-    <a href="https://t.me/abj0o" target="_blank" style="
-      color: #4fc3f7;
-      text-decoration: none;
-      margin: 0 10px;
-      transition: color 0.3s ease;
-    " onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#4fc3f7'">
-      <i class="fab fa-telegram"></i> @abj0o
-    </a>
-  </div>
-</footer>
+  <footer> <div class="footer-content"> <div class="footer-section">
+        Site owner:
+        <a href="https://www.instagram.com/hyper_cams" target="_blank" class="footer-link"> <i class="fab fa-instagram"></i> @hyper_cams
+        </a>
+      </div>
+      <div class="footer-section">
+        Developed by:
+        <a href="https://t.me/abj0o" target="_blank" class="footer-link"> <i class="fab fa-telegram"></i> @abj0o
+        </a>
+      </div>
+    </div>
+    <div class="footer-note">
+      &copy; <span id="currentYear"></span> Cam Doctor. All rights reserved. </div>
+  </footer>
 
   <script src="script.js"></script>
 </body>
