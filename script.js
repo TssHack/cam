@@ -2,6 +2,9 @@
 const { jsPDF } = window.jspdf;
 const outputDiv = document.getElementById("outputArea");
 const loadingIndicator = document.getElementById("loadingIndicator");
+const form = document.getElementById("camForm");
+const formErrorMessageDiv = document.getElementById("formErrorMessage");
+const allInputs = form.querySelectorAll('input[type="number"]');
 const buttons = {
     pdf: document.getElementById("btnGeneratePdf"),
     output: document.getElementById("btnShowOutput"),
@@ -16,31 +19,82 @@ const currentYearSpan = document.getElementById("currentYear");
  * @param {boolean} isLoading - True to show loading, false to hide.
  */
 function setLoading(isLoading) {
+    // Hide error messages when starting loading
     if (isLoading) {
+        formErrorMessageDiv.style.display = "none";
+        formErrorMessageDiv.innerHTML = "";
+        outputDiv.style.display = "none"; // Hide results during loading
         loadingIndicator.style.display = "flex";
-        outputDiv.style.display = "none"; // Hide old results during loading
         Object.values(buttons).forEach(btn => btn.disabled = true);
+        allInputs.forEach(input => input.disabled = true); // Disable inputs too
     } else {
         loadingIndicator.style.display = "none";
         Object.values(buttons).forEach(btn => btn.disabled = false);
+        allInputs.forEach(input => input.disabled = false); // Re-enable inputs
     }
 }
 
 /**
- * Collects data from the form inputs.
- * @returns {object} - Object containing the input values as numbers.
+ * Validates the form inputs.
+ * @returns {Array} - An array of error messages. Empty if valid.
+ */
+function validateForm() {
+    const errors = [];
+    allInputs.forEach(input => {
+        input.classList.remove('invalid'); // Reset invalid style
+        const value = input.value.trim();
+        const label = input.previousElementSibling?.textContent || input.id; // Get label text
+
+        if (value === "") {
+            errors.push(`Field "${label}" is required.`);
+            input.classList.add('invalid');
+        } else if (isNaN(parseFloat(value)) || !isFinite(value)) {
+             // isNaN checks for non-numeric, !isFinite checks for Infinity/-Infinity
+            errors.push(`Field "${label}" must be a valid number.`);
+            input.classList.add('invalid');
+        }
+    });
+    return errors;
+}
+
+/**
+ * Displays form validation errors.
+ * @param {Array} errors - Array of error messages.
+ */
+function displayErrors(errors) {
+    if (errors.length > 0) {
+        formErrorMessageDiv.innerHTML = `<strong>Please fix the following errors:</strong><ul>${errors.map(e => `<li>${e}</li>`).join('')}</ul>`;
+        formErrorMessageDiv.style.display = "block";
+        setLoading(false); // Ensure loading is off if validation fails immediately
+    } else {
+        formErrorMessageDiv.style.display = "none";
+        formErrorMessageDiv.innerHTML = "";
+    }
+}
+
+
+/**
+ * Collects data from the form inputs (assumes validation passed).
+ * @returns {object|null} - Object containing the input values as numbers, or null if validation failed.
  */
 function collectData() {
-    return {
-        lift: parseFloat(document.getElementById("lift").value) || 0,
-        intake1: parseFloat(document.getElementById("intake1").value) || 0,
-        intake01: parseFloat(document.getElementById("intake01").value) || 0,
-        exhaust1: parseFloat(document.getElementById("exhaust1").value) || 0,
-        exhaust01: parseFloat(document.getElementById("exhaust01").value) || 0,
-        intakeLCA: parseFloat(document.getElementById("intakeLCA").value) || 0,
-        exhaustLCA: parseFloat(document.getElementById("exhaustLCA").value) || 0
-    };
+     // Clear previous errors and validate
+    allInputs.forEach(input => input.classList.remove('invalid'));
+    const errors = validateForm();
+    displayErrors(errors);
+
+    if (errors.length > 0) {
+        return null; // Indicate validation failure
+    }
+
+    // If valid, collect data
+    const data = {};
+     allInputs.forEach(input => {
+        data[input.id] = parseFloat(input.value);
+    });
+    return data;
 }
+
 
 /**
  * Calculates derived camshaft timings.
@@ -48,38 +102,23 @@ function collectData() {
  * @returns {object} - Object containing calculated timings.
  */
 function calculateTimings(data) {
+    // ... (Calculation logic remains the same as previous version)
     const { intake1, intake01, exhaust1, exhaust01, intakeLCA, exhaustLCA } = data;
-
-    // Basic Valve Events (@1mm lift - simple angle calculation based on input)
-    // Note: These might need adjustment based on precise definition (BTDC/ATDC etc.)
     const ivo1 = intakeLCA - (intake1 / 2);
     const ivc1 = intakeLCA + (intake1 / 2);
-    const evo1 = exhaustLCA - (exhaust1 / 2); // Assuming symmetry
-    const evc1 = exhaustLCA + (exhaust1 / 2); // Assuming symmetry
-
-    // Lobe Separation Angle (LSA)
+    const evo1 = exhaustLCA - (exhaust1 / 2);
+    const evc1 = exhaustLCA + (exhaust1 / 2);
     const lsa = (intakeLCA + exhaustLCA) / 2;
-
-    // Overlap Calculation (using 0.1mm duration figures, common approximation)
-    // Overlap = (IntakeDur/2 - IntakeLCA) + (ExhaustDur/2 - ExhaustLCA) + 360 ?? Needs review based on convention
-    // Using simpler approximation: Overlap = (IntakeDur/2 + ExhaustDur/2) - (LSA * 2)
     const overlap01 = (intake01 / 2) + (exhaust01 / 2) - (lsa * 2);
-
-    // Cylinder Timing Crank-wise Calculations (Firing order: 1-3-4-2)
-    // Base calculation for cylinder 1 (relative to 360/720 cycle, using 0.1mm timings)
-    const cyl1IVO_crank = (360 + intakeLCA) - (intake01 / 2); // Example: reference point
-    const cyl1EVO_crank = (360 - exhaustLCA) - (exhaust01 / 2); // Example: reference point
-    // Note: These calculations might need review based on exact engine timing conventions (TDC ref etc.)
-
+    const cyl1IVO_crank = (360 + intakeLCA) - (intake01 / 2);
+    const cyl1EVO_crank = (360 - exhaustLCA) - (exhaust01 / 2);
     const firingOffsets = { 1: 0, 3: 180, 4: 360, 2: 540 };
-    const cylinders = [1, 3, 4, 2]; // Firing order
-
+    const cylinders = [1, 3, 4, 2];
     const crankTimings = cylinders.map(cyl => {
         const offset = firingOffsets[cyl];
-        // Ensure results are within 0-720 degree cycle
         const calculateCrankAngle = (baseAngle, offset) => {
              let angle = (baseAngle + offset) % 720;
-             return angle < 0 ? angle + 720 : angle; // Handle potential negative modulo results
+             return angle < 0 ? angle + 720 : angle;
         };
         return {
             cyl,
@@ -87,11 +126,8 @@ function calculateTimings(data) {
             EVO: calculateCrankAngle(cyl1EVO_crank, offset)
         };
     });
-
     return {
-        ivo1, ivc1, evo1, evc1, // Events @ 1mm
-        lsa, overlap01, // Calculated metrics
-        crankTimings // Crank angles per cylinder
+        ivo1, ivc1, evo1, evc1, lsa, overlap01, crankTimings
     };
 }
 
@@ -102,17 +138,18 @@ function calculateTimings(data) {
  * Displays the calculated results in the HTML output area.
  */
 function showResults() {
-    setLoading(true);
+    const inputData = collectData(); // This now includes validation
+    if (!inputData) return; // Stop if validation failed
+
+    setLoading(true); // Set loading only after validation passes
     try {
-        const inputData = collectData();
         const calculated = calculateTimings(inputData);
+        // ... (HTML generation logic remains mostly the same as previous version)
         const { lift, intake1, intake01, exhaust1, exhaust01, intakeLCA, exhaustLCA } = inputData;
         const { ivo1, ivc1, evo1, evc1, lsa, overlap01, crankTimings } = calculated;
 
-        // Generate clean HTML for the output area
         outputDiv.innerHTML = `
             <h3>Calculation Results</h3>
-
             <h4>Input Parameters</h4>
             <p><strong>Valve Lift:</strong> ${lift} mm</p>
             <p><strong>Intake Duration (@1mm):</strong> ${intake1}°</p>
@@ -129,213 +166,235 @@ function showResults() {
             <p><strong>Intake Valve Close (@1mm):</strong> ${ivc1.toFixed(1)}°</p>
             <p><strong>Exhaust Valve Open (@1mm):</strong> ${evo1.toFixed(1)}°</p>
             <p><strong>Exhaust Valve Close (@1mm):</strong> ${evc1.toFixed(1)}°</p>
-            <small style="color: var(--text-muted-color);">(Note: IVO/IVC/EVO/EVC angles based on simple LCA +/- Duration/2 calculation. May differ from BTDC/ATDC conventions.)</small>
-
+            <small>(Note: IVO/IVC/EVO/EVC angles based on simple LCA +/- Duration/2 calculation.)</small>
 
             <h4>Cylinder Crank Timing (Firing Order: 1-3-4-2)</h4>
             ${crankTimings.map(t => `
                 <p><strong>Cylinder ${t.cyl}:</strong> Intake Opens @ ${t.IVO.toFixed(1)}° | Exhaust Opens @ ${t.EVO.toFixed(1)}°</p>
             `).join('')}
-             <small style="color: var(--text-muted-color);">(Note: Crank angles relative to 720° cycle, calculated based on 0.1mm duration timings.)</small>
+            <small>(Note: Crank angles relative to 720° cycle, based on 0.1mm duration timings.)</small>
         `;
-        outputDiv.style.display = "block"; // Show the results
+        outputDiv.style.display = "block";
+
     } catch (error) {
         console.error("Error displaying results:", error);
-        outputDiv.innerHTML = `<p style="color: #ff6b6b;">Error calculating or displaying results. Please check input values and console.</p>`;
-        outputDiv.style.display = "block";
+        displayErrors([`An unexpected error occurred: ${error.message}`]); // Show error in UI
+        outputDiv.style.display = "none";
     } finally {
         setLoading(false);
     }
 }
 
 /**
- * Generates a professional PDF report of the camshaft data.
+ * Generates a professional PDF report (Layout Revised).
  */
 async function generatePDF() {
+    const inputData = collectData(); // Validate first
+    if (!inputData) return;
+
     setLoading(true);
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+        orientation: 'p', // portrait
+        unit: 'mm',       // millimeters
+        format: 'a4'      // standard A4 size
+    });
 
     try {
-        const inputData = collectData();
         const calculated = calculateTimings(inputData);
         const { lift, intake1, intake01, exhaust1, exhaust01, intakeLCA, exhaustLCA } = inputData;
         const { ivo1, ivc1, evo1, evc1, lsa, overlap01, crankTimings } = calculated;
-        const currentDate = new Date().toLocaleDateString('en-US'); // Or 'fa-IR' for Persian date
+        const currentDate = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY format
 
-        // --- PDF Styling & Constants ---
-        const primaryColor = '#00aaff'; // Use hex for jsPDF
-        const secondaryColor = '#00e5ff';
-        const textColor = '#333333'; // Dark text for readability on white
-        const mutedColor = '#666666';
-        const headerBgColor = '#1f2937'; // Dark background for header
+        // --- PDF Styling & Layout Constants ---
+        const primaryColor = '#0ea5e9'; // Use hex
+        const secondaryColor = '#14b8a6';
+        const textColor = '#2d3748'; // Dark Gray for text (better contrast)
+        const mutedColor = '#718096'; // Medium Gray
+        const headerBgColor = '#1e293b'; // slate-800
         const headerTextColor = '#FFFFFF';
-        const pageMargin = 15;
+        const pageMargin = 15; // mm
         const contentWidth = doc.internal.pageSize.getWidth() - 2 * pageMargin;
-        const logoWidth = 25; // Width of logo in PDF
-        const logoHeight = 25; // Height of logo in PDF
-        let yPos = 0; // Track vertical position
+        const logoWidth = 20;
+        const logoHeight = 20;
+        const lineHeight = 6; // Vertical space per line (mm)
+        const sectionGap = 10; // Space between sections (mm)
+        let yPos = 0; // Track vertical position (mm)
 
         // --- Load Logo ---
         let logoImage = null;
         try {
+            // ... (Logo loading logic remains the same as previous version)
             const img = new Image();
             img.src = "goz.png";
-            // Use Promise to handle image loading with await
             await new Promise((resolve, reject) => {
-                img.onload = () => {
-                    logoImage = img;
-                    resolve();
-                };
-                img.onerror = (err) => {
-                    console.error("Failed to load logo:", err);
-                    reject("Logo load error"); // Reject the promise on error
-                };
+                img.onload = () => { logoImage = img; resolve(); };
+                img.onerror = (err) => { console.error("Failed to load logo:", err); reject("Logo load error"); };
             });
         } catch (error) {
-            console.warn("Could not load logo for PDF. Proceeding without it.");
-            // logoImage remains null, handled later
+            console.warn("Could not load logo for PDF.");
         }
-
 
         // --- PDF Header ---
         doc.setFillColor(headerBgColor);
-        doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, "F"); // Header background
-        yPos = 15; // Initial Y pos for header text
+        doc.rect(0, 0, doc.internal.pageSize.getWidth(), 30, "F"); // Slightly shorter header
+        yPos = 12; // Center text vertically
 
-        // Add logo to header if loaded
         if (logoImage) {
            doc.addImage(logoImage, 'PNG', pageMargin, yPos - logoHeight / 2, logoWidth, logoHeight);
         }
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
+        doc.setFontSize(16);
         doc.setTextColor(headerTextColor);
-        doc.text("Cam Doctor v2 - Timing Report", doc.internal.pageSize.getWidth() / 2, yPos, { align: "center" });
-        yPos += 8; // Move down
+        doc.text("Cam Doctor v2.1 - Timing Report", doc.internal.pageSize.getWidth() / 2, yPos + 1, { align: "center" }); // Adjust Y slightly for better centering
+        yPos += 6;
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text(`Generated: ${currentDate}`, doc.internal.pageSize.getWidth() / 2, yPos, { align: "center" });
+        doc.setFontSize(9);
+        doc.text(`Generated: ${currentDate}`, doc.internal.pageSize.getWidth() / 2, yPos + 1, { align: "center" });
 
-        yPos = 50; // Starting Y position below header
+        yPos = 40; // Starting Y position below header
+
+        // --- Helper for drawing section headers ---
+        const drawSectionHeader = (title) => {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(primaryColor);
+            doc.text(title, pageMargin, yPos);
+            yPos += 2; // Space before line
+            doc.setLineWidth(0.2);
+            doc.setDrawColor(primaryColor);
+            doc.line(pageMargin, yPos, pageMargin + contentWidth, yPos); // Underline
+            yPos += lineHeight; // Space after line
+        };
+
+        // --- Helper for adding text pairs (label: value) ---
+        // Returns the *next* yPos
+        const addTextPair = (label, value, x, currentY, labelWidth = 45) => {
+            doc.setFont('helvetica', 'bold'); // Bolder labels
+            doc.setFontSize(9);
+            doc.setTextColor(mutedColor);
+            doc.text(label, x, currentY, { align: 'left' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(textColor);
+            doc.text(value, x + labelWidth, currentY, { align: 'left' });
+            return currentY + lineHeight; // Return next position
+        };
 
         // --- Input Parameters Section ---
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.setTextColor(textColor);
-        doc.text("Input Parameters", pageMargin, yPos);
-        yPos += 6;
-        doc.setLineWidth(0.3);
-        doc.setDrawColor(primaryColor);
-        doc.line(pageMargin, yPos, pageMargin + contentWidth, yPos); // Underline
-        yPos += 8;
+        drawSectionHeader("Input Parameters");
+        const col1X = pageMargin + 2; // Indent slightly
+        const col2X = pageMargin + contentWidth / 2 + 5; // Start of second column
+        let startY = yPos;
 
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
-        doc.setTextColor(mutedColor); // Use muted for labels
+        yPos = addTextPair("Valve Lift:", `${lift} mm`, col1X, yPos);
+        yPos = addTextPair("Intake Dur (@1mm):", `${intake1}°`, col1X, yPos);
+        yPos = addTextPair("Intake Dur (@0.1mm):", `${intake01}°`, col1X, yPos);
+        yPos = addTextPair("Intake LCA:", `${intakeLCA}°`, col1X, yPos);
+        let endY1 = yPos;
 
-        // Layout inputs in two columns
-        const col1X = pageMargin + 5;
-        const col2X = pageMargin + contentWidth / 2 + 5;
-        const initialY = yPos;
+        // Reset Y for second column, align with startY
+        yPos = startY;
+        yPos = addTextPair("Exhaust Dur (@1mm):", `${exhaust1}°`, col2X, yPos);
+        yPos = addTextPair("Exhaust Dur (@0.1mm):", `${exhaust01}°`, col2X, yPos);
+        yPos = addTextPair("Exhaust LCA:", `${exhaustLCA}°`, col2X, yPos);
+        let endY2 = yPos;
 
-        doc.text("Valve Lift:", col1X, yPos); doc.setTextColor(textColor); doc.text(`${lift} mm`, col1X + 45, yPos);
-        doc.setTextColor(mutedColor); yPos += 7;
-        doc.text("Intake Dur (@1mm):", col1X, yPos); doc.setTextColor(textColor); doc.text(`${intake1}°`, col1X + 45, yPos);
-         doc.setTextColor(mutedColor); yPos += 7;
-        doc.text("Intake Dur (@0.1mm):", col1X, yPos); doc.setTextColor(textColor); doc.text(`${intake01}°`, col1X + 45, yPos);
-         doc.setTextColor(mutedColor); yPos += 7;
-        doc.text("Intake LCA:", col1X, yPos); doc.setTextColor(textColor); doc.text(`${intakeLCA}°`, col1X + 45, yPos);
-
-        // Reset Y for second column
-        yPos = initialY;
-        doc.setTextColor(mutedColor);
-
-        doc.text("Exhaust Dur (@1mm):", col2X, yPos); doc.setTextColor(textColor); doc.text(`${exhaust1}°`, col2X + 50, yPos);
-        doc.setTextColor(mutedColor); yPos += 7;
-        doc.text("Exhaust Dur (@0.1mm):", col2X, yPos); doc.setTextColor(textColor); doc.text(`${exhaust01}°`, col2X + 50, yPos);
-        doc.setTextColor(mutedColor); yPos += 7;
-        doc.text("Exhaust LCA:", col2X, yPos); doc.setTextColor(textColor); doc.text(`${exhaustLCA}°`, col2X + 50, yPos);
-
-        yPos += 15; // Space after input section
+        // Set yPos to the bottom of the longest column + gap
+        yPos = Math.max(endY1, endY2) + sectionGap / 2;
 
         // --- Calculated Values Section ---
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.setTextColor(textColor);
-        doc.text("Calculated Valve Events & Metrics", pageMargin, yPos);
-        yPos += 6;
-        doc.setDrawColor(primaryColor);
-        doc.line(pageMargin, yPos, pageMargin + contentWidth, yPos); // Underline
-        yPos += 8;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
-        doc.setTextColor(mutedColor);
-
-        // Two columns again
-        yPos = addPdfTextPair(doc, "LSA:", `${lsa.toFixed(1)}°`, col1X, yPos, 45, textColor, mutedColor);
-        yPos = addPdfTextPair(doc, "Overlap (@0.1mm):", `${overlap01.toFixed(1)}°`, col1X, yPos, 45, textColor, mutedColor);
-        yPos = addPdfTextPair(doc, "IVO (@1mm):", `${ivo1.toFixed(1)}°`, col1X, yPos, 45, textColor, mutedColor);
-        yPos = addPdfTextPair(doc, "IVC (@1mm):", `${ivc1.toFixed(1)}°`, col1X, yPos, 45, textColor, mutedColor);
+        drawSectionHeader("Calculated Valve Events & Metrics");
+        startY = yPos;
+        yPos = addTextPair("LSA:", `${lsa.toFixed(1)}°`, col1X, yPos);
+        yPos = addTextPair("Overlap (@0.1mm):", `${overlap01.toFixed(1)}°`, col1X, yPos);
+        yPos = addTextPair("IVO (@1mm):", `${ivo1.toFixed(1)}°`, col1X, yPos);
+        yPos = addTextPair("IVC (@1mm):", `${ivc1.toFixed(1)}°`, col1X, yPos);
+        endY1 = yPos;
 
         // Reset Y for second column
-        yPos = initialY + 14; // Align with second row of first column
+        yPos = startY;
+        yPos = addTextPair("EVO (@1mm):", `${evo1.toFixed(1)}°`, col2X, yPos);
+        yPos = addTextPair("EVC (@1mm):", `${evc1.toFixed(1)}°`, col2X, yPos);
+        endY2 = yPos;
 
-        yPos = addPdfTextPair(doc, "EVO (@1mm):", `${evo1.toFixed(1)}°`, col2X, yPos, 45, textColor, mutedColor);
-        yPos = addPdfTextPair(doc, "EVC (@1mm):", `${evc1.toFixed(1)}°`, col2X, yPos, 45, textColor, mutedColor);
-
-
-        yPos += 15; // Space after calculated section
+        yPos = Math.max(endY1, endY2) + sectionGap / 2;
 
 
         // --- Cylinder Crank Timing Section ---
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.setTextColor(textColor);
-        doc.text("Cylinder Crank Timing (Firing Order: 1-3-4-2)", pageMargin, yPos);
-        yPos += 6;
-        doc.setDrawColor(primaryColor);
-        doc.line(pageMargin, yPos, pageMargin + contentWidth, yPos); // Underline
-        yPos += 8;
-
+        drawSectionHeader("Cylinder Crank Timing (Firing Order: 1-3-4-2)");
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(11);
+        doc.setFontSize(9);
+        doc.setTextColor(textColor);
+
+        // Simple table-like structure
+        const cylColX = pageMargin + 5;
+        const intakeColX = pageMargin + 35;
+        const exhaustColX = pageMargin + 95;
+
+        // Header row (optional, but adds clarity)
+         doc.setFont('helvetica', 'bold');
+         doc.setTextColor(mutedColor);
+         doc.text("Cylinder", cylColX, yPos);
+         doc.text("Intake Open (° Crank)", intakeColX, yPos);
+         doc.text("Exhaust Open (° Crank)", exhaustColX, yPos);
+         yPos += 2; // space before line
+         doc.setDrawColor(mutedColor);
+         doc.setLineWidth(0.1);
+         doc.line(pageMargin, yPos, pageMargin + contentWidth, yPos); // Separator line
+         yPos += lineHeight -1;
+         doc.setFont('helvetica', 'normal');
+         doc.setTextColor(textColor);
+
 
         crankTimings.forEach(t => {
-            let lineText = `Cylinder ${t.cyl}:  Intake Opens @ ${t.IVO.toFixed(1)}°   |   Exhaust Opens @ ${t.EVO.toFixed(1)}°`;
-            doc.setTextColor(mutedColor);
-            doc.text(lineText, pageMargin + 5, yPos);
-            yPos += 7;
+            doc.text(`${t.cyl}`, cylColX, yPos);
+            doc.text(`${t.IVO.toFixed(1)}°`, intakeColX, yPos);
+            doc.text(`${t.EVO.toFixed(1)}°`, exhaustColX, yPos);
+            yPos += lineHeight;
+        });
+
+        yPos += sectionGap / 2; // Add gap after the section
+
+        // --- Notes Section ---
+        yPos += 5; // Add some extra space before notes
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(mutedColor);
+        const notes = [
+            "Note: IVO/IVC/EVO/EVC angles based on simple LCA +/- Duration/2 calculation.",
+            "Note: Crank angles relative to 720° cycle, based on 0.1mm duration timings.",
+            "Note: Overlap calculated using 0.1mm duration values."
+        ];
+         notes.forEach(note => {
+            doc.text(note, pageMargin, yPos);
+            yPos += lineHeight - 2; // Tighter spacing for notes
         });
 
         // --- PDF Footer ---
         const pageHeight = doc.internal.pageSize.getHeight();
         doc.setFont('helvetica', 'italic');
-        doc.setFontSize(9);
+        doc.setFontSize(8);
         doc.setTextColor(mutedColor);
-        const footerText = "Report generated by Cam Doctor v2 | @hyper_cams | Developed by @abj0o";
+        // Draw a line above footer
+        doc.setLineWidth(0.1);
+        doc.setDrawColor(mutedColor);
+        doc.line(pageMargin, pageHeight - 15, pageMargin + contentWidth, pageHeight - 15);
+        const footerText = "Report generated by Cam Doctor v2.1 | Owner: @hyper_cams | Developed by @abj0o";
         doc.text(footerText, pageMargin, pageHeight - 10);
-        doc.text(`Page 1 of 1`, contentWidth + pageMargin, pageHeight - 10, { align: "right" });
+        doc.text(`Page 1 of 1`, contentWidth + pageMargin - 10, pageHeight - 10, { align: "right" });
 
 
         // --- Save PDF ---
-        doc.save("Cam_Doctor_Report_v2.pdf");
+        doc.save("Cam_Doctor_Report_v2.1.pdf");
 
     } catch (error) {
         console.error("Error generating PDF:", error);
-        alert("Failed to generate PDF. Please check console for details."); // User feedback
+        displayErrors([`Failed to generate PDF: ${error.message}`]); // Show error in UI
     } finally {
         setLoading(false);
     }
-}
-
-// Helper function for adding label/value pairs to PDF easily
-function addPdfTextPair(doc, label, value, x, y, labelWidth, valueColor, labelColor, spacing = 7) {
-    doc.setTextColor(labelColor);
-    doc.text(label, x, y);
-    doc.setTextColor(valueColor);
-    doc.text(value, x + labelWidth, y);
-    return y + spacing; // Return the next Y position
 }
 
 
@@ -343,41 +402,40 @@ function addPdfTextPair(doc, label, value, x, y, labelWidth, valueColor, labelCo
  * Exports the output area as a PNG image.
  */
 async function exportAsImage() {
-    // Ensure results are visible first
+    const inputData = collectData(); // Validate first
+    if (!inputData) return;
+
+    // Ensure results are visible for capture
     if (outputDiv.style.display === 'none') {
         showResults(); // Calculate and display if not already visible
+        // Check if showResults failed (e.g., due to calculation error)
+        if (outputDiv.style.display === 'none') {
+             displayErrors(["Cannot export image until output is successfully generated."]);
+             return;
+        }
         // Give a brief moment for the DOM to update before capturing
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 150));
     }
-
-    // If still hidden after trying to show, abort.
-     if (outputDiv.style.display === 'none') {
-         alert("Please generate the output first before exporting as image.");
-         return;
-     }
 
     setLoading(true);
 
     try {
-        // Options for html2canvas for better quality/appearance
         const canvasOptions = {
-            scale: 2, // Increase resolution
-            useCORS: true, // If using external images/fonts (though not here)
-            backgroundColor: '#0f172a', // Set explicit background similar to body
-            logging: false // Disable console logging from html2canvas
+            scale: 2.5, // Higher resolution for image
+            useCORS: true,
+            backgroundColor: '#1e293b', // Match body background end color (or a solid color)
+            logging: false
         };
-
         const canvas = await html2canvas(outputDiv, canvasOptions);
-
         const link = document.createElement('a');
-        link.download = 'Cam_Doctor_Output_v2.png';
-        link.href = canvas.toDataURL("image/png");
+        link.download = 'Cam_Doctor_Output_v2.1.png';
+        link.href = canvas.toDataURL("image/png", 0.95); // Slightly compress PNG
         link.click();
-        link.remove(); // Clean up the temporary link
+        link.remove();
 
     } catch (error) {
         console.error("Error exporting image:", error);
-        alert("Failed to export image. Please check console for details.");
+         displayErrors([`Failed to export image: ${error.message}`]); // Show error in UI
     } finally {
         setLoading(false);
     }
@@ -385,9 +443,20 @@ async function exportAsImage() {
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Set current year in footer
     if (currentYearSpan) {
         currentYearSpan.textContent = new Date().getFullYear();
     }
+    // Add event listener to clear errors when user starts typing again
+    allInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            // Only clear if there's an error message currently displayed
+            if (formErrorMessageDiv.style.display === 'block') {
+                 input.classList.remove('invalid'); // Remove invalid style from current input
+                 // Optionally, clear all errors immediately, or wait for next validation
+                 // formErrorMessageDiv.style.display = 'none';
+                 // formErrorMessageDiv.innerHTML = '';
+            }
+        });
+    });
 });
 
