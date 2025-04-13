@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en"> <head>
+<html lang="en">
+<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cam Doctor v2 - Camshaft Analyzer</title> <link rel="preconnect" href="https://fonts.googleapis.com">
+  <title>Cam Doctor v2.1 - Camshaft Analyzer</title> <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
@@ -15,37 +16,40 @@
 <body>
 
   <div class="container">
-    <img src="goz.png" alt="Logo" class="logo-img" /> <h2 class="title">Cam Doctor v2</h2> <form id="camForm" onsubmit="event.preventDefault();">
-      <div class="form-grid"> <div class="input-group">
+    <img src="goz.png" alt="Logo" class="logo-img" />
+    <h2 class="title">Cam Doctor <span class="version">v2.1</span></h2> <div id="formErrorMessage" class="error-message" style="display: none;"></div>
+
+    <form id="camForm" onsubmit="return false;"> <div class="form-grid">
+        <div class="input-group">
           <label for="lift">Lift (mm)</label>
-          <input type="number" step="any" id="lift" placeholder="e.g. 10.5">
+          <input type="number" step="any" id="lift" placeholder="e.g. 10.5" required inputmode="decimal">
         </div>
         <div class="input-group">
           <label for="intake1">Intake Duration @ 1mm Lift (°)</label>
-          <input type="number" step="any" id="intake1" placeholder="e.g. 270">
+          <input type="number" step="any" id="intake1" placeholder="e.g. 270" required inputmode="decimal">
         </div>
         <div class="input-group">
           <label for="intake01">Intake Duration @ 0.1mm Lift (°)</label>
-          <input type="number" step="any" id="intake01" placeholder="e.g. 300">
+          <input type="number" step="any" id="intake01" placeholder="e.g. 300" required inputmode="decimal">
         </div>
         <div class="input-group">
            <label for="exhaust1">Exhaust Duration @ 1mm Lift (°)</label>
-           <input type="number" step="any" id="exhaust1" placeholder="e.g. 272">
+           <input type="number" step="any" id="exhaust1" placeholder="e.g. 272" required inputmode="decimal">
         </div>
         <div class="input-group">
           <label for="exhaust01">Exhaust Duration @ 0.1mm Lift (°)</label>
-          <input type="number" step="any" id="exhaust01" placeholder="e.g. 310">
+          <input type="number" step="any" id="exhaust01" placeholder="e.g. 310" required inputmode="decimal">
         </div>
         <div class="input-group">
           <label for="intakeLCA">Intake Lobe Center Angle (LCA °)</label>
-          <input type="number" step="any" id="intakeLCA" placeholder="e.g. 110">
+          <input type="number" step="any" id="intakeLCA" placeholder="e.g. 110" required inputmode="decimal">
         </div>
         <div class="input-group">
            <label for="exhaustLCA">Exhaust Lobe Center Angle (LCA °)</label>
-           <input type="number" step="any" id="exhaustLCA" placeholder="e.g. 114">
+           <input type="number" step="any" id="exhaustLCA" placeholder="e.g. 114" required inputmode="decimal">
         </div>
       </div>
-    </form>
+       </form>
 
     <div class="buttons">
       <button type="button" id="btnGeneratePdf" onclick="generatePDF()">
@@ -68,19 +72,24 @@
       </div>
   </div>
 
-  <footer> <div class="footer-content"> <div class="footer-section">
+  <footer>
+    <div class="footer-content">
+      <div class="footer-section">
         Site owner:
-        <a href="https://www.instagram.com/hyper_cams" target="_blank" class="footer-link"> <i class="fab fa-instagram"></i> @hyper_cams
+        <a href="https://www.instagram.com/hyper_cams" target="_blank" class="footer-link">
+          <i class="fab fa-instagram"></i> @hyper_cams
         </a>
       </div>
       <div class="footer-section">
         Developed by:
-        <a href="https://t.me/abj0o" target="_blank" class="footer-link"> <i class="fab fa-telegram"></i> @abj0o
+        <a href="https://t.me/abj0o" target="_blank" class="footer-link">
+          <i class="fab fa-telegram"></i> @abj0o
         </a>
       </div>
     </div>
     <div class="footer-note">
-      &copy; <span id="currentYear"></span> Cam Doctor. All rights reserved. </div>
+      &copy; <span id="currentYear"></span> Cam Doctor. All rights reserved.
+    </div>
   </footer>
 
   <script src="script.js"></script>
